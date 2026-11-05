@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>薪金計時器</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="薪金計時器">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1422">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f4f5f8;--card:#fff;--line:#e3e6ee;--tx:#1b2030;--mute:#6b7388;--gold:#c27d0e;--green:#0f9d6b;--blue:#3b6fe0;--btn:#e89f3a;--btntx:#1b1405}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0f1422;--card:#131a2e;--line:#232c45;--tx:#e8ecf7;--mute:#8791ab;--gold:#f0b13a;--green:#4fd1a0;--blue:#6b95f5;--btn:#e89f3a;--btntx:#1b1405}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0f1422;--card:#131a2e;--line:#232c45;--tx:#e8ecf7;--mute:#8791ab;--gold:#f0b13a;--green:#4fd1a0;--blue:#6b95f5}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,"PingFang HK","Noto Sans TC","Microsoft JhengHei",sans-serif;padding:16px}
+.wrap{max-width:460px;margin:0 auto}
+.top{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--mute)}
+.top b{color:var(--tx);font-size:16px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+.stat{display:flex;align-items:center;gap:10px;margin:18px 0 2px}
+.stat h1{margin:0;font-size:34px;color:var(--blue)}
+.pill{font-size:12px;padding:5px 10px;border-radius:20px;border:1px solid var(--green);color:var(--green)}
+.sub{color:var(--mute);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin-top:16px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.big{font-size:44px;color:var(--gold);font-weight:700;margin:10px 0 14px;white-space:nowrap}
+.big small{font-size:22px}
+hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+.tip{border:1px solid var(--line);border-radius:14px;padding:12px;font-size:14px;line-height:1.5;margin-top:12px}
+.btn{width:100%;border:0;border-radius:16px;padding:16px;font-size:17px;font-weight:700;background:var(--btn);color:var(--btntx);margin-top:16px;cursor:pointer}
+.btn.on{background:var(--green)}
+.bar{height:10px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--btn))}
+details{margin-top:16px}
+summary{cursor:pointer;color:var(--mute);font-size:14px}
+label{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:14px;gap:10px}
+input,select{background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:8px;font-size:15px;width:150px}
+.g{color:var(--green)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><b>🔥 薪金計時器</b><span class="mono" id="clock"></span></div>
+  <div class="stat"><h1 id="st">上班中</h1><span class="pill" id="pill">實時回血中 ⚡</span></div>
+  <div class="sub" id="left"></div>
+
+  <div class="card">
+    <div class="row sub"><span>今日已賺</span><span class="mono">實時跳動</span></div>
+    <div class="big mono" id="earn"></div>
+    <hr>
+    <div class="row"><span class="sub">當前賺錢速度</span><span class="mono g" id="rate"></span></div>
+    <div class="tip" id="tip"></div>
+    <div class="bar"><i id="gfill"></i></div>
+  </div>
+
+  <button class="btn" id="brk">☕ 開啟「帶薪去廁所 / 摸魚」計時</button>
+  <div class="sub mono" id="brkinfo" style="text-align:center;margin-top:8px"></div>
+
+  <div class="row" style="margin-top:22px"><b>今日工時進度 <span class="mono" style="color:var(--blue)" id="pct"></span></b><span class="sub mono" id="hrs"></span></div>
+  <div class="bar"><i id="fill"></i></div>
+
+  <div class="card">
+    <div class="row"><b>本月累計已賺</b><b class="mono" style="color:var(--blue);font-size:24px" id="month"></b></div>
+    <div class="sub" style="margin-top:6px;font-size:13px">已過的工作日按滿勤計算（星期一至五）。</div>
+    <hr>
+    <div class="sub mono" style="font-size:13px">時薪 <span id="hw" style="color:var(--tx)"></span> ｜ 滿勤日薪 <span id="dw" class="g"></span></div>
+  </div>
+
+  <details id="set">
+    <summary>⚙️ 設定</summary>
+    <label>薪資類型<select id="type"><option value="monthly">月薪</option><option value="hourly">時薪</option></select></label>
+    <label>金額 (HK$)<input id="amount" type="number" min="0" step="any"></label>
+    <label>上班時間<input id="start" type="time"></label>
+    <label>下班時間<input id="end" type="time"></label>
+    <label>賺錢目標<select id="goal"><option value="lunch">🍱 一盒兩餸飯加凍飲 (48)</option><option value="tea">🧋 一杯手搖奶茶 (28)</option><option value="hotpot">🍲 一頓火鍋 (300)</option><option value="airpods">🎧 AirPods Pro (1,899)</option><option value="flight">✈️ 一張來回機票 (3,000)</option><option value="iphone">📱 一部 iPhone (9,000)</option><option value="custom">🎯 自訂目標</option></select></label>
+    <div id="cust" style="display:none">
+      <label>目標名稱<input id="gname" type="text" placeholder="例如：Switch"></label>
+      <label>目標金額 (HK$)<input id="gprice" type="number" min="1" step="any"></label>
+    </div>
+    <div class="sub" style="margin-top:8px;font-size:12px">預設價錢只供參考，可選「自訂目標」輸入實價。</div>
+    <div class="sub" style="margin-top:10px;font-size:12px">資料只存在你這部裝置的瀏覽器，不會上傳。</div>
+  </details>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const DEF={type:'monthly',amount:12000,start:'09:00',end:'18:00',goal:'lunch',gname:'',gprice:100};
+const G={lunch:{name:'一盒兩餸飯加凍飲',price:48,icon:'🍱'},tea:{name:'一杯手搖奶茶',price:28,icon:'🧋'},hotpot:{name:'一頓火鍋',price:300,icon:'🍲'},airpods:{name:'AirPods Pro',price:1899,icon:'🎧'},flight:{name:'一張來回機票',price:3000,icon:'✈️'},iphone:{name:'一部 iPhone',price:9000,icon:'📱'}};
+function goalInfo(){return S.goal==='custom'?{name:S.gname||'自訂目標',price:S.gprice>0?S.gprice:1,icon:'🎯'}:(G[S.goal]||G.lunch);}
+let S=Object.assign({},DEF);
+try{const t=localStorage.getItem('salary-timer');if(t)S=Object.assign(S,JSON.parse(t));}catch(e){}
+let brk={on:false,since:0,total:0};
+try{const b=JSON.parse(localStorage.getItem('salary-brk')||'null');const d=new Date().toDateString();if(b&&b.day===d){brk=b.v;}}catch(e){}
+const f=(n,d=2)=>n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const wd=d=>d.getDay()>0&&d.getDay()<7-0&&d.getDay()!==6;
+function workdaysInMonth(y,m){let c=0;const n=new Date(y,m+1,0).getDate();for(let i=1;i<=n;i++)if(wd(new Date(y,m,i)))c++;return c;}
+function dur(s){s=Math.max(0,Math.floor(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return (h?h+'小時':'')+m+'分'+(s%60)+'秒';}
+function save(){try{localStorage.setItem('salary-timer',JSON.stringify(S));}catch(e){}}
+function saveBrk(){try{localStorage.setItem('salary-brk',JSON.stringify({day:new Date().toDateString(),v:brk}));}catch(e){}}
+['type','amount','start','end','goal','gname','gprice'].forEach(k=>{
+  const el=$(k);el.value=S[k];
+  el.addEventListener('input',()=>{const v=el.value;S[k]=(el.type==='number')?(parseFloat(v)||0):v;save();});
+});
+$('brk').onclick=()=>{
+  if(brk.on){brk.total+=(Date.now()-brk.since)/1000;brk.on=false;}else{brk.on=true;brk.since=Date.now();}
+  saveBrk();
+};
+function tick(){
+  const now=new Date();
+  const [sh,sm]=(S.start||'09:00').split(':').map(Number);
+  const [eh,em]=(S.end||'18:00').split(':').map(Number);
+  let hh=(eh*60+em-sh*60-sm)/60;if(hh<=0)hh+=24;
+  const h=Math.max(hh,0.5),total=h*3600;
+  const st=new Date(now.getFullYear(),now.getMonth(),now.getDate(),sh,sm,0);
+  const isWd=wd(now);
+  const nWd=workdaysInMonth(now.getFullYear(),now.getMonth())||1;
+  const hourly=S.type==='hourly'?S.amount:S.amount/(nWd*h);
+  const sec=hourly/3600,day=hourly*h;
+  let el=(now-st)/1000;
+  let status='上班中',pill='實時回血中 ⚡';
+  if(!isWd){el=0;status='休息日';pill='今日不用上班 🎉';}
+  else if(el<0){el=0;status='未上班';pill='等緊打卡';}
+  else if(el>=total){el=total;status='已下班';pill='今日任務完成 ✅';}
+  const earned=el*sec;
+  $('clock').textContent=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+' '+'日一二三四五六'[now.getDay()].replace(/^/,'周')+' '+now.toTimeString().slice(0,8);
+  $('st').textContent=status;$('pill').textContent=pill;
+  $('left').textContent=status==='上班中'?'距離下班還有 '+dur(total-el):(status==='未上班'?'距離上班還有 '+dur(-(now-st)/1000):'');
+  const e=earned.toFixed(4).split('.');
+  $('earn').innerHTML='<small>HK$</small> '+Number(e[0]).toLocaleString('en-US')+'.<span style="font-size:30px">'+e[1]+'</span>';
+  $('rate').textContent='HK$ '+(status==='上班中'?sec:0).toFixed(4)+' / 秒';
+  $('cust').style.display=S.goal==='custom'?'block':'none';
+  $('pct').textContent=(el/total*100).toFixed(1)+'%';
+  $('hrs').textContent='已工作 '+(el/3600).toFixed(2)+' / '+h.toFixed(2)+' 小時';
+  $('fill').style.width=(el/total*100)+'%';
+  let past=0;for(let i=1;i<now.getDate();i++)if(wd(new Date(now.getFullYear(),now.getMonth(),i)))past++;
+  $('month').textContent='HK$ '+f(past*day+earned);
+  const g=goalInfo(),m=g.price,monthE=past*day+earned;
+  if(m<=day){
+    const n=Math.floor(earned/m);
+    $('tip').textContent=(status==='上班中'&&sec>0)?g.icon+' 再過 '+dur(((n+1)*m-earned)/sec)+'，就賺返「'+g.name+'」（HK$'+f(m,0)+'）！今日已賺 '+n+' 份。':g.icon+' 今日共賺到 '+n+' 份「'+g.name+'」（HK$'+f(m,0)+'）。';
+    $('gfill').style.width=(earned%m/m*100)+'%';
+  }else{
+    const need=m-monthE;
+    $('tip').textContent=need<=0?g.icon+' 本月已賺夠「'+g.name+'」（HK$'+f(m,0)+'）！🎉':g.icon+' 距離「'+g.name+'」（HK$'+f(m,0)+'）仲差 HK$'+f(need,0)+(day>0?'，以滿勤日薪計約 '+(need/day).toFixed(1)+' 個工作日。':'。');
+    $('gfill').style.width=Math.min(100,monthE/m*100)+'%';
+  }
+  $('hw').textContent='HK$ '+f(hourly);$('dw').textContent='HK$ '+f(day);
+  const bs=brk.total+(brk.on?(Date.now()-brk.since)/1000:0);
+  $('brk').textContent=brk.on?'🚽 摸魚中…按此結束':'☕ 開啟「帶薪去廁所 / 摸魚」計時';
+  $('brk').classList.toggle('on',brk.on);
+  $('brkinfo').textContent=bs>0?'今日摸魚 '+dur(bs)+'，期間賺咗 HK$ '+(bs*sec).toFixed(2):'';
+}
+tick();setInterval(tick,50);
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{});});}
+</script>
+</body>
+</html>
